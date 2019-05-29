@@ -3,9 +3,11 @@
 ## This is a fork of a fork
 
 The original by Charlie Tangora (ctangora @ gmail)
+
 https://github.com/ginsweater/gif-h
 
-Fork #1 - https://github.com/rversteegen/gif-h
+### Fork #1 - https://github.com/rversteegen/gif-h
+
 Substantial improvements to the quality of generated GIFs
  
 + better quantization when building a palette
@@ -17,16 +19,16 @@ Substantial improvements to the quality of generated GIFs
 + kd-tree statistics collection
 + multiple fixes
 
-Fork #2 - https://github.com/apankrat/gif-h
+### Fork #2 - https://github.com/apankrat/gif-h (you are here)
+
 Mostly structural and cosmetic improvements to the code
-(you are here)
 
 + converted all file and heap operations into callbacks, this removed dependency on <stdio.h>
++ reworked code to preallocate and reuse buffers
 + converted all 3 API entries to void functions because they can only fail in a callback and the calling code already knows about these failures
 + converted input argument checks to asserts - no reason to gracefully handle junk being passed in
-+ rearranged code a bit - grouped macros, structs and functions
++ rearranged code a bit - grouped together macros, types, structs and functions
 + switched to using from int/uint32_t to size_t where appropriate
-+ reworked code to preallocate and reuse buffers
 + ported over GIF_FLIP_VERT patch
 + simplifed and tightened function argument lists a bit, passing GifWriter* instead where appropriate
 + trivial cosmetic changes
