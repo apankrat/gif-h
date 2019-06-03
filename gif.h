@@ -103,14 +103,14 @@ struct GifRGBA32
 
 struct GifPalette
 {
-    int bitDepth;  // log2 of the possible number of colors
-//  int numColors; // The number of colors actually used (including transpColIndex)
+    size_t bitDepth;     // log2 of the possible number of colors
+    size_t colCount;     // 1 << bitDepth
     GifRGBA colors[256]; // alpha component is ignored
 };
 
 struct GifHeapQueue
 {
-    int len;
+    size_t len;
     struct qitem
     {
         int cost, nodeIndex;
@@ -221,7 +221,7 @@ void GifHeapPop(GifHeapQueue * q)
     GIF_ASSERT(q->len);
 
     // We pop off the last element and look where to put it (don't resize yet)
-    int hole = 1;
+    size_t hole = 1;
     q->len--;
     GifHeapQueue::qitem * to_insert = &q->items[1 + q->len];
 
@@ -229,7 +229,7 @@ void GifHeapPop(GifHeapQueue * q)
     while (hole*2 < 1 + q->len)
     {
         // Find the largest child
-        int child = hole*2;  // left child
+        size_t child = hole*2;  // left child
         if (child + 1 < 1 + q->len && q->items[child + 1].cost > q->items[child].cost)
             child++;
         if (to_insert->cost >= q->items[child].cost)
@@ -265,8 +265,8 @@ bool GifRGBEqual(GifRGBA pixA, GifRGBA pixB)
 // Check if two palettes have the same colours (k-d tree stuff ignored)
 bool GifPalettesEqual(const GifPalette * pPal1, const GifPalette * pPal2)
 {
-    return pPal1->bitDepth == pPal2->bitDepth &&
-           !memcmp(pPal1->colors, pPal2->colors, sizeof(GifRGBA) * (1 << pPal1->bitDepth));
+    return pPal1->colCount == pPal2->colCount &&
+           !memcmp(pPal1->colors, pPal2->colors, sizeof(GifRGBA) * pPal1->colCount);
 }
 
 // Update bestDiff and return true if color 'ind' is closer to r,g,b than bestDiff.
@@ -413,7 +413,7 @@ void GifAverageColors(GifRGBA * image, int transpColIndex, GifKDTree * tree)
 
     // Fill the rest of the palette with the leaf nodes. Nodes still on the queue are leaves
     int palIndex = 0;
-    for (int qIndex = 1; qIndex <= tree->queue.len; qIndex++, palIndex++)
+    for (size_t qIndex = 1; qIndex <= tree->queue.len; qIndex++, palIndex++)
     {
         if (palIndex == transpColIndex) palIndex++;
         GifHeapQueue::qitem& qitem = tree->queue.items[qIndex];
@@ -516,7 +516,7 @@ void GifSplitNode(GifRGBA * image, GifKDTree * tree, GifKDNode & node)
 void GifSplitPalette(GifRGBA * image, GifKDTree * tree)
 {
     // -1 for transparent color
-    int maxLeaves = (1 << tree->pal.bitDepth) - 1;
+    size_t maxLeaves = tree->pal.colCount - 1;
     while (tree->queue.len < maxLeaves)
     {
         int nodeIndex = tree->queue.items[1].nodeIndex;  // Top of the heap
@@ -556,13 +556,14 @@ int GifPickChangedPixels(const GifRGBA * lastFrame, GifRGBA * frame, size_t numP
 
 // Creates a palette by placing all the image pixels in a k-d tree and then averaging the blocks at the bottom.
 // This is known as the "modified median split" technique
-void GifMakePalette(GifWriter * writer, const GifRGBA * lastFrame, const GifRGBA * nextFrame, int bitDepth, GifKDTree * tree)
+void GifMakePalette(GifWriter * writer, const GifRGBA * lastFrame, const GifRGBA * nextFrame, size_t bitDepth, GifKDTree * tree)
 {
     size_t width  = writer->width;
     size_t height = writer->height;
     size_t pixels = writer->framePixels;
 
     tree->pal.bitDepth = bitDepth;
+    tree->pal.colCount = 1ULL << bitDepth;
     tree->numNodes = 0;
     tree->queue.len = 0;
 
@@ -776,7 +777,7 @@ void GifWritePalette(const GifPalette * pPal, GifWriterCb * cb)
     cb->putc(0);  // first color: transparency
     cb->putc(0);
     cb->putc(0);
-    for (int ii=1; ii<(1 << pPal->bitDepth); ii++)
+    for (size_t ii=1; ii<pPal->colCount; ii++)
     {
         const GifRGBA & col = pPal->colors[ii];
         cb->putc((int)col.r);
@@ -820,12 +821,12 @@ void GifWriteLzwImage(GifWriter * writer, size_t delay, const GifPalette * pPal)
     cb->putc(height & 0xff);
     cb->putc((height >> 8) & 0xff);
 
-    cb->putc(0x80 + pPal->bitDepth-1); // local color table present, 2 ^ bitDepth entries
+    cb->putc(0x80 + pPal->bitDepth - 1); // local color table present, 2 ^ bitDepth entries
     GifWritePalette(pPal, cb);
 
     //
     const uint32_t minCodeSize = pPal->bitDepth;
-    const uint32_t clearCode = 1 << pPal->bitDepth;
+    const uint32_t clearCode = pPal->colCount;
 
     cb->putc(pPal->bitDepth); // min code size 8 bits
 
@@ -985,7 +986,7 @@ void GifBegin(GifWriter * writer, GifWriterCb * cb, size_t width, size_t height,
 // The GIFWriter should have been created by GIFBegin.
 // AFAIK, it is legal to use different bit depths for different frames of an image -
 // this may be handy to save bits in animations that don't change much.
-void GifWriteFrame(GifWriter * writer, const GifRGBA * image, size_t delay, int bitDepth = 8, bool dither = false)
+void GifWriteFrame(GifWriter * writer, const GifRGBA * image, size_t delay, size_t bitDepth = 8, bool dither = false)
 {
     GIF_ASSERT(writer && writer->cb);
     GIF_ASSERT(1 <= bitDepth && bitDepth <= 8);
