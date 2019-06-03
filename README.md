@@ -2,13 +2,13 @@
 
 ## This is a fork of a fork
 
-The original by Charlie Tangora (ctangora @ gmail)
+### The original
 
-https://github.com/ginsweater/gif-h
+https://github.com/ginsweater/gif-h - by Charlie Tangora
 
-### Fork #1 - https://github.com/rversteegen/gif-h
+### Fork #1 - https://github.com/rversteegen/gif-h - by Ralph Versteegen
 
-Substantial improvements to the quality of generated GIFs
+Substantial algorithmical and feature improvements -> (much) better GIF quality
  
 + better quantization when building a palette
 + support for 8-bit frames
@@ -19,7 +19,7 @@ Substantial improvements to the quality of generated GIFs
 + kd-tree statistics collection
 + multiple fixes
 
-### Fork #2 - https://github.com/apankrat/gif-h (you are here)
+### Fork #2 - https://github.com/apankrat/gif-h - by yours truly
 
 Mostly structural and cosmetic improvements to the code
 
